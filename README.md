@@ -40,7 +40,7 @@ Design Data Intensive App Notes
 ### Disadvantage
 | SQL | NOSQL   | 
 | :---:   | :---: |
-| Schema change is long and slow | Week support for join |
+| Schema change is long and slow | Weak support for joins |
 | Better support for n:1, n:m relation | Difficult with n:m relation|
 |  |On Update, entire document update|
 
