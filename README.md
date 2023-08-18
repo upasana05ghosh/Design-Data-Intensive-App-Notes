@@ -117,7 +117,17 @@ Go with hybrid
      * Issue - can't distinguish between number and string
        * Don't support binary string
    * Binary Encoding
-     * 
+     * Thrift (FB), ProtoBuff (Google), Avro
+       - Open source
+       - Required a schema for encoding
+       - Mostly backward and forward compatible
+
+ ### Data flow
+   * Via DB
+   * via service call
+     - Rest, Soap, RPC(gRPC)
+   * via Async message passing
+     - Kafka
        
 
  
