@@ -99,5 +99,27 @@ Go with hybrid
 | Faster for write | Faster for read |
 
  ---
+# Chapter 4: Encoding & Evolution
+### What is encoding
+  * Convert data from in-memory to byte sequence
+
+### Why encode?
+ * Send data over network
+ * Write to a file
+
+### Tools available for encoding
+  * Lang specific
+     * Ex - java - java.io.seralization
+     * Pros - easy to use
+     * Cons - programming lang specific,
+         * not forward/backward compatible
+   * JSON, XML
+     * Issue - can't distinguish between number and string
+       * Don't support binary string
+   * Binary Encoding
+     * 
        
+
+ 
+ 
     
