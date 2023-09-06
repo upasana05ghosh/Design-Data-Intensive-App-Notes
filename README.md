@@ -128,8 +128,20 @@ Go with hybrid
      - Rest, Soap, RPC(gRPC)
    * via Async message passing
      - Kafka
-       
 
+ ----
+ # Chapter - 5: Replication
+ 
+### Replication
+* What - Keeping a copy of same data on multiple machines that are connected via network.
+* Why?
+   - Reduce access latency
+   - Increase availability
+   - Increae read throughput
+ * Algorithm for replicating changes between nodes
+  - Single leader
+  - Multi leader
+  - Leaderless
  
  
     
