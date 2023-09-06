@@ -152,8 +152,38 @@ Go with hybrid
 - Sync
    - Adv -> followers always up-to-date
    - Disadv -> if followers doesn't respond, write won't proceed. It's impracticle for all followers to be in sync.
-   - Solution -> One of the follower to be in sync. Called 1 sync follower or semi sync.  
-   
+   - Solution -> One of the follower to be in sync. Called 1 sync follower or semi sync.
+
+ #### Handling node outage
+ - Follower failure -> catch up recovery
+ - Leader faillure -> failover
+
+#### Implementation of Replication Log
+- Statement based replication -> every statement is forwareded to followers
+- WAL (write ahead log) -> Log send to follower
+- Logical(row-based) log replication -> only those values are send which are updated/inserted/deleted and not the entire row.
+- Trigger based replication
+
+#### Problem with Replication Log
+- Reading your own write -> User submitted data and want to view it immediately. 
+- Monotonic Read -> User reads from several replicas, they may see things moving backward in time. 
+- Conistent Prefix Read -> If sequence of write happens in a order, read should see them in order.
+
+### Multi-Leader Replica
+- When
+   - Multi-datacenter operation -> leader in each center
+   - Client with offline operation -> calendar
+   - Collaborative editing -> google docs
+ 
+ - Handling write conflicts
+    - Conflict avoidance -> all write for a particular record goes through same leader
+    - Converging towards a consistent state.
+  
+  ### Leaderless Replication
+  - Quorums for reading and writing
+    - If n replicas, every write must be confirmed by w nodes and at least r nodes for each read
+    - w + r > n
+      
  
  
     
