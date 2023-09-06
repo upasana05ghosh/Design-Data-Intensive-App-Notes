@@ -33,9 +33,10 @@
     - [Partition of Key-value data](#partition-of-key-value-data)
       - [Approach to Partition](#approach-to-partition)
       - [Skewed workload and relieving hot spot](#skewed-workload-and-relieving-hot-spot)
-      - [Partitioning and Secondary Index](#partitioning-and-secondary-index)
-      - [Rebalancing Partitions](#rebalancing-partitions)
+    - [Partitioning and Secondary Index](#partitioning-and-secondary-index)
+    - [Rebalancing Partitions](#rebalancing-partitions)
     - [Request Routing](#request-routing)
+
 
 # Design-Data-Intensive-App-Notes
 Design Data Intensive App Notes
@@ -265,7 +266,7 @@ Go with hybrid
   * Sol -> Add a random number to the beg or end of the key
   * Issue -> Reading will become more expensive and we need additional book keeping
 
-#### Partitioning and Secondary Index
+### Partitioning and Secondary Index
 * Secondary index -> doesn't identify a record uniquely but rather is a way of searching for occurrences of a particular value
   
 * Document-partitioned Indexes (local index)
@@ -279,7 +280,7 @@ Go with hybrid
   * Adv -> Make read more efficient
   * Disadv -> write will be slow and complicated. Write to single doc will affect multiple partition of the index. 
 
-#### Rebalancing Partitions
+### Rebalancing Partitions
 * Why Rebalance -> things changes in DB.
   * Dataset size increases -> add more disk/ram
   * a machine fails and other machine need to take over the failed node
