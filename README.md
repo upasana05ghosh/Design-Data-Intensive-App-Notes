@@ -139,9 +139,21 @@ Go with hybrid
    - Increase availability
    - Increae read throughput
  * Algorithm for replicating changes between nodes
-  - Single leader
-  - Multi leader
-  - Leaderless
+   - Single leader
+   - Multi leader
+   - Leaderless
+  
+ ### Single Leader
+ - called Leader based replication/ master-slave replication
+ - Write -> only accepted on leader
+ - Read -> leader or any follower
+
+#### Sync Vs Async Replication
+- Sync
+   - Adv -> followers always up-to-date
+   - Disadv -> if followers doesn't respond, write won't proceed. It's impracticle for all followers to be in sync.
+   - Solution -> One of the follower to be in sync. Called 1 sync follower or semi sync.  
+   
  
  
     
