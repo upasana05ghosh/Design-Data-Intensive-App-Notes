@@ -26,6 +26,17 @@
       - [Problem with Replication Log](#problem-with-replication-log)
     - [Multi-Leader Replica](#multi-leader-replica)
     - [Leaderless Replication](#leaderless-replication)
+- [Chapter 6: Partitioning](#chapter-6-partitioning)
+    - [What is Partitioning?](#what-is-partitioning)
+    - [Why Partition?](#why-partition)
+    - [Partition \& Replication](#partition--replication)
+    - [Partition of Key-value data](#partition-of-key-value-data)
+      - [Approach to Partition](#approach-to-partition)
+      - [Skewed workload and relieving hot spot](#skewed-workload-and-relieving-hot-spot)
+      - [Partitioning and Secondary Index](#partitioning-and-secondary-index)
+      - [Rebalancing Partitions](#rebalancing-partitions)
+    - [Request Routing](#request-routing)
+
 # Design-Data-Intensive-App-Notes
 Design Data Intensive App Notes
 
@@ -165,7 +176,7 @@ Go with hybrid
 * Why?
    - Reduce access latency
    - Increase availability
-   - Increae read throughput
+   - Increase read throughput
  * Algorithm for replicating changes between nodes
    - Single leader
    - Multi leader
@@ -179,15 +190,15 @@ Go with hybrid
 #### Sync Vs Async Replication
 - Sync
    - Adv -> followers always up-to-date
-   - Disadv -> if followers doesn't respond, write won't proceed. It's impracticle for all followers to be in sync.
+   - Disadv -> if followers doesn't respond, write won't proceed. It's impractical for all followers to be in sync.
    - Solution -> One of the follower to be in sync. Called 1 sync follower or semi sync.
 
  #### Handling node outage
  - Follower failure -> catch up recovery
- - Leader faillure -> failover
+ - Leader failure -> failover
 
 #### Implementation of Replication Log
-- Statement based replication -> every statement is forwareded to followers
+- Statement based replication -> every statement is forwarded to followers
 - WAL (write ahead log) -> Log send to follower
 - Logical(row-based) log replication -> only those values are send which are updated/inserted/deleted and not the entire row.
 - Trigger based replication
@@ -195,11 +206,11 @@ Go with hybrid
 #### Problem with Replication Log
 - Reading your own write -> User submitted data and want to view it immediately. 
 - Monotonic Read -> User reads from several replicas, they may see things moving backward in time. 
-- Conistent Prefix Read -> If sequence of write happens in a order, read should see them in order.
+- Consistent Prefix Read -> If sequence of write happens in a order, read should see them in order.
 
 ### Multi-Leader Replica
 - When
-   - Multi-datacenter operation -> leader in each center
+   - Multi-data-center operation -> leader in each center
    - Client with offline operation -> calendar
    - Collaborative editing -> google docs
  
@@ -212,6 +223,93 @@ Go with hybrid
     - If n replicas, every write must be confirmed by w nodes and at least r nodes for each read
     - w + r > n
       
- 
+ ---
+ # Chapter 6: Partitioning
+
+### What is Partitioning?
+- Way of breaking a large dataset into smaller ones.
+
+### Why Partition?
+- To spread the data and the query load evenly across nodes.
+
+### Partition & Replication
+- Partition is usually combined with replication so that copies of each partition are stored on multiple nodes for fault tolerant.
+
+### Partition of Key-value data
+- Access record by primary key
+- Skewed -> If partition is unfair, some partition will have more data than other. 
+- Hot spot -> A partition with disappropriately high record. 
+
+#### Approach to Partition
+* Partition by Key Range
+  * Assign a continuous range of keys to each partition. Keys will be sorted
+  * Adv - Range queries will be efficiently searched.
+  * Issue - Risk of hot spot
+  * Solution - Partition boundaries need to adapt to data
+
+* Partition by Hash of key
+  * use hash function to determine the partition of a given key.
+  * Assign each partition a range of hashes (rather than a range of keys)
+  * Issue -> Ability to do efficient range queries
+  * Solution -> For range queries, search in all partition and then combine the result.
+  
+* Hybrid approach
+  * compound key
+  * first part of the key -> to identify the partition and
+  * other part -> for the sort order
+  * Ex -> social media site, one user may post many updates -> (user_id, update_ts)
+
+#### Skewed workload and relieving hot spot
+* Hashing a key -> can help reduce hot spot
+* Few cases where a key become very hot:
+  * Sol -> Add a random number to the beg or end of the key
+  * Issue -> Reading will become more expensive and we need additional book keeping
+
+#### Partitioning and Secondary Index
+* Secondary index -> doesn't identify a record uniquely but rather is a way of searching for occurrences of a particular value
+  
+* Document-partitioned Indexes (local index)
+  * Each partition maintain it's own secondary index.
+  * Adv - Write to a document -> you only need to update the index in that document.
+  * Issue - For reading, we need to send request to all the partition, combine all result back. 
+  
+* Term-partitioned index (global indexes)
+  * Construct index that cover data in all partition.
+  * This global index must be partitioned too.
+  * Adv -> Make read more efficient
+  * Disadv -> write will be slow and complicated. Write to single doc will affect multiple partition of the index. 
+
+#### Rebalancing Partitions
+* Why Rebalance -> things changes in DB.
+  * Dataset size increases -> add more disk/ram
+  * a machine fails and other machine need to take over the failed node
+  * Read throughput increases and so need more CPUs.
+
+* Strategies for Rebalancing
+  * How not to do: hash mod N
+    * Issue -> the no. of nodes N changes
+  
+  * Fixed number of partition
+    * Create many more no. of partition than there are nodes. 
+    * If 10 nodes, 1000 partition and each node will have 100 partition. 
+    * New node added -> steal a few partition from each existing nodes.
+    * Issue -> choosing the right number of partition is difficult if size of dataset is highly variable.
+
+    * Dynamic Partition
+      * Used by key range partition DB
+        * when a partition grows to exceed a configured size, split it into two partitions.
+        * When a partition shrinks below some threshold, merge with adjacent. 
+
+   * Partition proportionally to nodes
+     * Fixed no. of partition per node
+     * New node add -> randomly choose fixed no. of existing partition to split.
+
+### Request Routing
+* When a client make a request, how does it know which node to connect to?
+  * Service discovery
+  * Zookeeper -> keep track of the cluster metadata
+
+
+
  
     
