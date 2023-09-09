@@ -36,6 +36,19 @@
     - [Partitioning and Secondary Index](#partitioning-and-secondary-index)
     - [Rebalancing Partitions](#rebalancing-partitions)
     - [Request Routing](#request-routing)
+- [Chapter - 8: Trouble with Distributed System](#chapter---8-trouble-with-distributed-system)
+    - [Partial Failure](#partial-failure)
+    - [Unreliable network](#unreliable-network)
+      - [Network fault in Practice](#network-fault-in-practice)
+      - [Detecting Faults](#detecting-faults)
+      - [Timeout and unbounded delays](#timeout-and-unbounded-delays)
+    - [Unreliable clock](#unreliable-clock)
+      - [Time of day clock](#time-of-day-clock)
+      - [Monotonic clock](#monotonic-clock)
+    - [Process pauses](#process-pauses)
+    - [Knowledge, Truth and Lies](#knowledge-truth-and-lies)
+      - [Truth is defined by the Majority](#truth-is-defined-by-the-majority)
+      - [Byzantine Faults](#byzantine-faults)
 
 
 # Design-Data-Intensive-App-Notes
@@ -310,6 +323,64 @@ Go with hybrid
   * Service discovery
   * Zookeeper -> keep track of the cluster metadata
 
+---
+
+# Chapter - 8: Trouble with Distributed System
+
+### Partial Failure
+* In a distributed system, some part may be broken in unpredictable way.
+* Non-deterministic
+
+### Unreliable network
+* internet and most internet n/w in datacenter send async packet network.
+* the network gives no guarantees as to when a packet will arrive. 
+* One way -> timeout
+
+#### Network fault in Practice
+* Handling network fault doesn't necessarily means tolerating them. 
+* If network is mostly reliable -> show an error message to the user while experiencing n/w problem. 
+
+#### Detecting Faults
+* Retry a few times (TCP retries transparently)
+* wait for a timeout to elapse and eventually declare the node dead if you don't hear back within timeout.
+
+#### Timeout and unbounded delays
+* Long timeout -> long wait until a node is declared dead (user may have to wait or see error message)
+* Short timeout -> detect fault faster, but higher risk of incorrectly declaring a node dead when it suffered a temporary slowdown. 
+* One way -> choose timeout experimentally -> system can continuously measure response time and their variability and automatically adjust timeout.
+
+### Unreliable clock
+* Each machine in the network has it's own clock -> hardware device.
+* Issue -> device are not perfectly accurate.
+* NTP -> Network Time Protocol - allow computer clock to be adjusted according to the time reported by a group of server. 
+
+#### Time of day clock
+* return the current date and time
+* usually synchronized with NTP
+* Issue - If local clock is too far ahead of NTP server, it may be forcefully reset and appear to jump back to the previous point in time.
+
+#### Monotonic clock
+* suitable for measuring a duration (time interval)
+* don't need synchronization. 
+
+### Process pauses
+* A node in a distributed system must assume that it's execution can be paused for sometime at any point. 
+* Ex 
+  * GC pause -> needs to stop all running thread. May last for several min. 
+  * Live migration of a VM from one host to another without a reboot. 
+
+### Knowledge, Truth and Lies
+
+#### Truth is defined by the Majority
+* quorum (voting among the nodes)
+  * An absolute majority of more than half of the nodes. 
+
+#### Byzantine Faults
+* Byzantine Faults -> There's a risk that nodes may lie (send corrupted response)
+* Byzantine General Problem -> Problem of reaching a consensus in this untrusting env. 
+* Byzantine fault tolerant -> A system continue to operate correctly in Byzantine fault. 
+* Weak form of lying -> Invalid message due to n/w issue, s/w bugs and misconfiguration. 
+  * Handled by checksums, sanitizing input from the users. 
 
 
  
