@@ -36,6 +36,16 @@
     - [Partitioning and Secondary Index](#partitioning-and-secondary-index)
     - [Rebalancing Partitions](#rebalancing-partitions)
     - [Request Routing](#request-routing)
+- [Chapter - 7: Transactions](#chapter---7-transactions)
+    - [Transaction](#transaction)
+    - [ACID](#acid)
+    - [Single-Object and Multi-Object Operations](#single-object-and-multi-object-operations)
+    - [Weak Isolation Level](#weak-isolation-level)
+      - [Read committed](#read-committed)
+      - [Snapshot Isolation and Repeatable Read](#snapshot-isolation-and-repeatable-read)
+      - [Prevent lost Updates](#prevent-lost-updates)
+      - [Write skew and Phantoms](#write-skew-and-phantoms)
+    - [Serializability](#serializability)
 - [Chapter - 8: Trouble with Distributed System](#chapter---8-trouble-with-distributed-system)
     - [Partial Failure](#partial-failure)
     - [Unreliable network](#unreliable-network)
@@ -49,7 +59,6 @@
     - [Knowledge, Truth and Lies](#knowledge-truth-and-lies)
       - [Truth is defined by the Majority](#truth-is-defined-by-the-majority)
       - [Byzantine Faults](#byzantine-faults)
-
 
 # Design-Data-Intensive-App-Notes
 Design Data Intensive App Notes
@@ -325,6 +334,94 @@ Go with hybrid
 
 ---
 
+# Chapter - 7: Transactions
+
+### Transaction
+* Is a way for an app to group several reads and writes together into a logical unit. 
+* Either the transaction succeeds (commit) or it fails (abort, rollback)
+* If it fails, app can safely retry
+
+### ACID
+* Atomicity, Consistency, Isolation, Durability
+* Atomicity - The system can only be in a state it was before the operation or after, not something in between. 
+* Consistency - certain statement about your data must always be true
+  * Ex - credit and debit in all accounts must be balanced.
+  * It depends on app's notion of invariants. 
+  * Not something that DB can guarantee
+* Isolation - concurrently executing transactions are isolated from each other. 
+  * When transactions are committed, the results should be same as if they had run serially. 
+* Durability - is a promise that once a transaction has committed successfully, any data it has written will not be forgotten, even it there's a hardware failure or Db crashes. 
+
+### Single-Object and Multi-Object Operations
+* Multi-Object transaction - Modify several objects at once. 
+  * Done with BEGIN TRANSACTION and a COMMIT statement as same transaction. 
+* Single-Object writes - atomicity and isolation also applies here.
+  * Ex - writing a 20KB json doc
+  * If power fails while DB is in the middle of the operation
+  * If another client read that doc while the write is in progress. 
+* Atomicity - log crash recovery
+* Isolation - lock on each object
+
+### Weak Isolation Level
+* Serializable isolation - Db grantees that transaction have the same effect as if they ran serially. 
+  * High performance cost.
+  * Alternate -> weaker level of isolation -> protect against most concurrency issues, but not all. 
+
+#### Read committed
+* no dirty read - When reading from DB, you only see committed change.
+* no dirty write - When writing to DB, you only overwrite data that's been committed.
+  * Delaying the second write until the first write's transaction has committed or aborted. 
+* Adv -> allow aborts(atomicity)
+  * prevents reading incomplete result of transaction. 
+  * prevents concurrent writes from getting intermingled. 
+* Issue -> Does not prevent race condition. 
+* Implement
+  * To prevent dirty write -> row level locks
+  * To prevent dirty read -> For every object that's written, the DB keeps a copy of both the old committed value and hte new val that holds the lock. While transaction is ongoing, it reads the old val. 
+
+#### Snapshot Isolation and Repeatable Read
+* Read skew -> client sees different parts of DB at different points in time. 
+  * It's a temp inconsistency.
+  * Cases when it's not tolerable: 
+    * Backups -> while taking backups, write will happen continuously. Some part of the backup will have older date and some newer data. If you need to restore it, inconsistency will become permanent. 
+    * Analytic queries and integrity checks
+  * Sol -> Snapshot isolation
+    * each transaction reads from a consistent snapshot of the DB. 
+    * transaction sees all the data that was committed at the start of transaction. 
+    * Implement -> Db to keep several different version of an object side by side -> MVCC(multi-version concurrency control)
+
+#### Prevent lost Updates
+* occur if app reads some value form the DB, modifies it and write back the modified val.
+* If two transaction do this concurrently, one of the modification will be lost. 
+  * Sol -> 
+    * Atomic write operation -> taking exclusive lock on the object when it's read until the update has been applied.
+      * or execute all atomic operation on a single thread
+    * Explicit locking -> ex -> for update clause should take a lock on all rows returned by the query.
+    * Automatically detecting lost updates -> Allow transactions to execute in parallel and if the transaction manager detects a lost update, abort the transaction and force to retry. 
+    * compare and set -> Avoid lost updates by allowing an update to happen only if the value has not changed since you last read it. 
+
+#### Write skew and Phantoms
+* Write skew -> a transaction read something, makes a decision based on the value it reads and write to DB. Another transaction did the same and the DB is incorrect state now. 
+* Ex - Alice and Bob are on-call. They are busy today and check if they can be relived from the duty of on-call. They both click the button to relieve them. The system does: if doctor's count for on_call >= 1, update requesting_doc's on_call to false. Both will be relieved from on-call and no doctor is available now. 
+* Characterizing write skew
+  * neither a dirty write nor a lost update as the transactions are updating two different object.
+  * leads to race condition. 
+  * only possible when the transaction ran concurrently. 
+
+### Serializability
+* strongest isolation level
+  * executing transaction in serial order -> on a single thread.
+  * 2 Phase Locking (2PL)
+    * Read -> concurrently as long as nobody is writing
+    * Write -> exclusive access.
+    * Adv -> Provide serializability
+      *  protect against all race conditions (including lost update and write skew)
+  * Serializable snapshot isolation (SSI)
+    * uses an optimistic approach
+    * allowing transaction to proceed without blocking 
+    * when a transaction wants to commit, it is checked and aborted if execution is not serializable. 
+
+
 # Chapter - 8: Trouble with Distributed System
 
 ### Partial Failure
@@ -381,7 +478,3 @@ Go with hybrid
 * Byzantine fault tolerant -> A system continue to operate correctly in Byzantine fault. 
 * Weak form of lying -> Invalid message due to n/w issue, s/w bugs and misconfiguration. 
   * Handled by checksums, sanitizing input from the users. 
-
-
- 
-    
