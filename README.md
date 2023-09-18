@@ -59,6 +59,17 @@
     - [Knowledge, Truth and Lies](#knowledge-truth-and-lies)
       - [Truth is defined by the Majority](#truth-is-defined-by-the-majority)
       - [Byzantine Faults](#byzantine-faults)
+- [Chapter - 9: Consistency and Consensus](#chapter---9-consistency-and-consensus)
+    - [Linearizability](#linearizability)
+      - [When do we need Linearizability](#when-do-we-need-linearizability)
+      - [Implementing Linearizability system](#implementing-linearizability-system)
+      - [Cost of linearizability](#cost-of-linearizability)
+    - [Ordering Guarantees](#ordering-guarantees)
+      - [Sequence Number Ordering](#sequence-number-ordering)
+      - [Total order broadcast](#total-order-broadcast)
+    - [Distributed Transaction and Consensus](#distributed-transaction-and-consensus)
+      - [Fault-Tolerant Consensus](#fault-tolerant-consensus)
+
 
 # Design-Data-Intensive-App-Notes
 Design Data Intensive App Notes
@@ -478,3 +489,99 @@ Go with hybrid
 * Byzantine fault tolerant -> A system continue to operate correctly in Byzantine fault. 
 * Weak form of lying -> Invalid message due to n/w issue, s/w bugs and misconfiguration. 
   * Handled by checksums, sanitizing input from the users. 
+
+---
+
+# Chapter - 9: Consistency and Consensus
+
+### Linearizability
+* strong consistency
+* Make a system appear as if there's only a single copy of the data.
+* As soon as one client successfully completes a write, all client reading from the DB must be able to see the value just written. 
+
+#### When do we need Linearizability
+* Locking and leader election
+  * single leader replication - need to ensure only one leader, not several (split brain)
+* Constraints and uniqueness
+    * Uniqueness constraint in DB (username or email must be unique)
+* Cross channel timing dependency
+  * Additional communication channel in the system. 
+
+#### Implementing Linearizability system
+* simplest sol -> Use a single copy of data. But not fault tolerant. 
+* Sol to fault tolerant -> replication
+* Replication Method:
+  * Single leader method - read from leader or sync follower -> partially linearizable
+* Consensus algo -> linearizable
+* Multi-leader replication -> not linearizable
+* Leaderless replication -> may not be linearizable
+  * quorum may not be linearizable when network delays
+  * can be linearizable if reader perform read repairs, but reduced performance
+
+#### Cost of linearizability
+* CAP -> Consistency, Availability, Partition Tolerance: pick 2 out of 3.
+  * Network partition are a kind of fault, so don't have a choice. 
+
+### Ordering Guarantees
+* Why ordering -> to preserve causality.
+  * Ex - casual dep between question and answer
+* Causally consistent -> if a system obeys the ordering imposed by causality. 
+* Total order -> allow any two elements to be compared. 
+  * linearizability -> we've a total order of operation. 
+* Partial ordered -> Ex: Is {a,b} greater than {b,c}. They are incomparable. 
+  * Causality -> 2 operations are concurrent if neither happened before the other.
+
+#### Sequence Number Ordering
+* We can use sequence no. or timestamp to order event. 
+* How to generate if multi-leader or leaderless db?
+  * Each nodes can generate it's own set of sequence.
+    * Reserve some bits to uniquely identify nodes.
+    * Each node may process diff no. of operations per sec. 
+  * Attach timestamp from time-of-day clock.
+    * Subject to clock skew
+  * Preallocate block of sequence no. 
+    * causally later operation may be give lesser range of no. 
+* Issue with 3 approaches -> the sequence no. they generate are not consistent with causality. 
+* Lamport timestamp
+  * Generating a sequence no. that is consistent with causality. 
+  * (counter, node_id)
+  * every node and every client keeps track of the max counter value it has so far and include that max on every request. When a node receives a request or response with a max counter value greater than it's own counter val, it increases it's own counter to that max. 
+
+#### Total order broadcast
+* If a system that needs to ensure that a username uniquely identifies a user account.
+  * if two users concurrently try to create an account with the same name, one should succeed and other should fail. 
+  * Issue -> At this moment, the node doesn't know whether another node is concurrently in the process of creating an account with the same name. 
+  * Not sufficient to have total ordering of operation - you also need to know when the order is finalized. 
+* Total order broadcast -> The idea of knowing when your total order is finalized is captured. 
+  * is a protocol for exchanging messages between nodes.
+  * Requires two safety properties to be satisfied: 
+    * Reliable delivery -> no messages are lost
+    * Totally ordered delivery -> messages are delivered to every node in the same order. 
+  * Zookeeper and etcd -> implements total order broadcast. 
+
+### Distributed Transaction and Consensus
+* Consensus - get several nodes to agree on something
+* Ex 
+  * Leader election
+  * atomic commit - transaction fails on some and succeed on some. Either all rollback/abort or commit.
+* 2 Phase commit (2PC)
+  * use a coordinator (transaction manager)
+  * Phase 1: A distributed transaction begins. When the app is ready to commit, thr coordinator begin Phase 1. It sends a preparer request to each of the nodes, asking them whether they are able to commit. 
+  * Phase 2: If all says yes, coordinator sends out a commit request. If anyone of them say no, the coordinator abort request.
+  * If participant fails to commit or abort, they must retry forever. 
+  * called blocking commit protocol - If coordinator fails, participant will wait until coordinator come back.
+* XA Transaction
+  * eXtended Architecture
+  * standard for implementing two phase commit across heterogeneous tech(2 DB from different vendors)
+  * Provide API for interfacing with a transaction coordinator. 
+
+#### Fault-Tolerant Consensus
+* Consensus algo must satisfy the following properties
+  * Uniform agreement -> No two nodes decide differently
+  * Integrity -> No nodes decide twice.
+  * Validity -> If a node decide value v, then v was proposed by some node.
+  * Termination -> Every node that does not crash eventually decide some value.
+* Uniform agreement and integrity -> core idea of consensus algo 
+* Validity -> rule out trivial sol like null
+* Termination -> fault tolerance. A consensus algorithm must make progress.
+* Achieve this by implementing total order broadcast. 
