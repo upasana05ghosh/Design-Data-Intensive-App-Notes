@@ -69,6 +69,12 @@
       - [Total order broadcast](#total-order-broadcast)
     - [Distributed Transaction and Consensus](#distributed-transaction-and-consensus)
       - [Fault-Tolerant Consensus](#fault-tolerant-consensus)
+- [Chapter 11: Stream Processing](#chapter-11-stream-processing)
+    - [Transmitting Event streams](#transmitting-event-streams)
+      - [Messaging Systems](#messaging-systems)
+      - [Partitioned Logs](#partitioned-logs)
+    - [Database and Streams](#database-and-streams)
+    - [Processing streams](#processing-streams)
 
 
 # Design-Data-Intensive-App-Notes
@@ -585,3 +591,40 @@ Go with hybrid
 * Validity -> rule out trivial sol like null
 * Termination -> fault tolerance. A consensus algorithm must make progress.
 * Achieve this by implementing total order broadcast. 
+
+---
+
+# Chapter 11: Stream Processing
+
+### Transmitting Event streams
+* Event - record which is small, self-contained, immutable object containing the details of something that happened at some point in time.
+* Topic or stream - related events are grouped together. 
+
+#### Messaging Systems
+* Common approach for notifying consumers about new events
+* Ways: 
+  * Direct messaging from producer to consumer - If consumer exposes a service on the network, producer can make direct HTTp request to push message to the consumer. Called web-hook pattern.
+  * Message broker - Run as a server,with producer and consumer connecting to it as a client. Producer write messages to the broker, and consumer receive them by reading them from the broker.
+  * Multiple consumers - When multiple consumers read messages from same topic, two main patterns of messaging are used:
+    - Load Balancing - each message is delivered to one of the consumers.
+    - Fan-out - each message is delivered to all the consumers.
+
+#### Partitioned Logs
+* Log based message broker - a producer sends a message by appending it to the end of the log and a consumer receives messages by reading the log sequentially. 
+* Consumer Offset - - Broker does not need to track ack from every single message - it only needs to periodically record the consumer offsets. This reduced bookkeeping overhead.
+* Disk space usage - if you append to the log, you will eventually run out of disk space. The log is divided into segments and old segments are deleted.
+* When consumer cannot keep up with producers -
+    - dropping messages
+    - buffering
+    - applying backpressure
+
+### Database and Streams
+* Change Data Capture (CDC) - process of observing all data changes written to the DB and extracting them in a form in which they can be replicated to other systems.
+  * changes are available immediately as a stream.
+* Event sourcing - store all changes to the app state as a log of change events.
+
+### Processing streams
+* What we can do with the streams
+    - Write it to DB
+    - Push the events to user like notification
+    - Process one or more input stream to produce one or more output stream
